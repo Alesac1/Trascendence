@@ -1,0 +1,3 @@
+Major: [1] backend framework, [1] Blockchain, [1] User Management, [1] oauth, [1] Remote Player, [3] 2FA, [2] Live chat, [1] Microservice, [2] CLI
+
+Minor: [1] Framework frontend, [1] use db, [3] dashboard statistics, [3] GDPR, [3] Graphana, [2] Browser compatibility, [2] multi lang, 
