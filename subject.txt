@@ -74,4 +74,35 @@ tedious tasks.
 
 
 Chapter IV Mandatory part
-This project is about creating a website for the mightyPongcontest!IV.1  OverviewYour software will offer a nice user interface and real-time multiplayer capabilities allowingto play Pong with all your friends!•At first, your project needs to adhere to the mandatory guidelines as a minimumrequirement (see next section), which will represent only a small portion to the finalgrade.•The second part of this subject will offer additional modules that can replace orcomplement the mandatory part.In this subject, you will face words that are highlighted in green.  They representtechnology choices that will evolve over time.  Be sure to pay close attention to theversion of the subject.•The use of libraries or tools that provide an immediateand complete solution for an entire feature or a module isprohibited.•Any direct instruction regarding the use (can, must, can’t) ofa third-party library or tool must be followed.•The use of a small library or tool that solves a simple, uniquetask representing a subcomponent of a larger feature or module,is allowed.•During the evaluation, the team will justify any use oflibrary or tool that is not explicitly approved by the projectguidelines and is not in contradiction with the project’sconstraints.•During the evaluation, the evaluator will take responsibilityfor determining whether the use of a specific library or toolis legitimate (and allowed) or if it essentially solves anentire feature or module (and is therefore prohibited).
+
+This project is about creating a website for the mightyPongcontest!
+
+IV.1  Overview
+	Your software will offer a nice user interface and real-time multiplayer capabilities 
+	allowing to play Pong with all your friends!
+	
+	•At first, your project needs to adhere to the mandatory guidelines as a minimumrequirement 
+		(see next section), which will represent only a small portion to the finalgrade.
+		
+	•The second part of this subject will offer additional modules that can replace orcomplement 
+		the mandatory part.
+		
+	In this subject, you will face words that are highlighted in green.  
+	They representtechnology choices that will evolve over time.  
+	Be sure to pay close attention to theversion of the subject.
+	
+	•The use of libraries or tools that provide an immediateand complete solution for an entire 
+		feature or a module isprohibited.
+		
+	•Any direct instruction regarding the use (can, must, can’t) of a third-party library or tool 
+		must be followed.
+	
+	•The use of a small library or tool that solves a simple, uniquetask representing a 
+		subcomponent of a larger feature or module,is allowed.
+		
+	•During the evaluation, the team will justify any use oflibrary or tool that is not explicitly 
+		approved by the projectguidelines and is not in contradiction with the project’sconstraints.
+			
+	•During the evaluation, the evaluator will take responsibilityfor determining whether the use 
+		of a specific library or toolis legitimate (and allowed) or if it essentially solves 
+		anentire feature or module (and is therefore prohibited).
