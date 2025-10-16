@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # NGINX Reverse Proxy with SSL
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: transcendence-nginx
+    ports:
+      - "443:443"
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend-core
+      - backend-servizio
+    networks:
+      - transcendence-network
+    restart: unless-stopped
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: transcendence-frontend
+    volumes:
+      - ./Frontend:/app
+      - /app/node_modules
+    networks:
+      - transcendence-network
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
+  # Backend Core Service
+  backend-core:
+    build:
+      context: ./Backend/Core
+      dockerfile: Dockerfile
+    container_name: transcendence-backend-core
+    volumes:
+      - ./Backend/Core/App:/app
+      - /app/node_modules
+    networks:
+      - transcendence-network
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
+  # Backend Servizio Service
+  backend-servizio:
+    build:
+      context: ./Backend/servizio
+      dockerfile: Dockerfile
+    container_name: transcendence-backend-servizio
+    volumes:
+      - ./Backend/servizio/App:/app
+      - /app/node_modules
+    networks:
+      - transcendence-network
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
+networks:
+  transcendence-network:
+    driver: bridge
+
+volumes:
+  node_modules_frontend:
+  node_modules_core:
+  node_modules_servizio:
