@@ -39,9 +39,6 @@ services:
       context: ./Backend/Core
       dockerfile: Dockerfile
     container_name: transcendence-backend-core
-    volumes:
-      - ./Backend/Core/App:/app
-      - /app/node_modules
     networks:
       - transcendence-network
     environment:
@@ -54,9 +51,8 @@ services:
       context: ./Backend/Blockchain
       dockerfile: Dockerfile
     container_name: transcendence-backend-blockchain
-    volumes:
-      - ./Backend/Blockchain/App:/app
-      - /app/node_modules
+    ports:
+      - "8545:3000"
     networks:
       - transcendence-network
     environment:
@@ -69,9 +65,6 @@ services:
       context: ./Backend/servizio
       dockerfile: Dockerfile
     container_name: transcendence-backend-servizio
-    volumes:
-      - ./Backend/servizio/App:/app
-      - /app/node_modules
     networks:
       - transcendence-network
     environment:
