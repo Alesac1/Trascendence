@@ -6,7 +6,7 @@
 #    By: dde-giov <dde-giov@student.42roma.it>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/10/16 13:47:18 by dde-giov          #+#    #+#              #
-#    Updated: 2025/10/16 13:53:02 by dde-giov         ###   ########.fr        #
+#    Updated: 2025/10/23 17:28:28 by dde-giov         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -24,7 +24,7 @@ CYAN := \033[1;36m
 
 RM := sudo rm -rf
 DKCMP :=	docker compose -f
-CMPYML :=	./docker-compose.yml
+CMPYML :=	./docker-compose.yaml
 
 all: $(NAME)
 

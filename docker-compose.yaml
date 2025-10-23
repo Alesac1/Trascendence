@@ -48,6 +48,21 @@ services:
       - NODE_ENV=development
     restart: unless-stopped
 
+  # Backend Blockchain Service
+  backend-blockchain:
+    build:
+      context: ./Backend/Blockchain
+      dockerfile: Dockerfile
+    container_name: transcendence-backend-blockchain
+    volumes:
+      - ./Backend/Blockchain/App:/app
+      - /app/node_modules
+    networks:
+      - transcendence-network
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
   # Backend Servizio Service
   backend-servizio:
     build:
