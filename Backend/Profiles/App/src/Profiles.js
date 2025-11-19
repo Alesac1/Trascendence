@@ -1,7 +1,5 @@
 
 import Fastify from 'fastify';
-//fastify jwt
-
 
 const app = Fastify({ logger: true });
 
