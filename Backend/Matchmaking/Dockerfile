@@ -9,6 +9,6 @@ RUN npm install
 # Copia il resto dell'applicazione
 COPY App/ .
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["npm", "start"]
