@@ -1,16 +1,22 @@
 {
-  "name": "backend",
+  "name": "auth-service",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "main": "src/Auth.js",
   "scripts": {
-    "start": "node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "node --watch src/Auth.js",
+    "start": "node src/Auth.js",
+    "test": "NODE_ENV=test node --test src/**/*.test.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "fastify": "^5.6.1"
+    "@fastify/jwt": "^8.0.1",
+    "better-sqlite3": "^11.5.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.1"
   }
 }

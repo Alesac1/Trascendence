@@ -9,11 +9,9 @@ services:
     container_name: transcendence-nginx
     ports:
       - "443:443"
-      - "80:80"
+      - "8080:80"
     depends_on:
       - frontend
-      - backend-core
-      - backend-servizio
     networks:
       - transcendence-network
     restart: unless-stopped
@@ -33,17 +31,6 @@ services:
       - NODE_ENV=development
     restart: unless-stopped
 
-  # Backend Core Service
-  backend-core:
-    build:
-      context: ./Backend/Core
-      dockerfile: Dockerfile
-    container_name: transcendence-backend-core
-    networks:
-      - transcendence-network
-    environment:
-      - NODE_ENV=development
-    restart: unless-stopped
 
   # Backend Blockchain Service
   backend-blockchain:
@@ -59,17 +46,6 @@ services:
       - NODE_ENV=development
     restart: unless-stopped
 
-  # Backend Servizio Service
-  backend-servizio:
-    build:
-      context: ./Backend/servizio
-      dockerfile: Dockerfile
-    container_name: transcendence-backend-servizio
-    networks:
-      - transcendence-network
-    environment:
-      - NODE_ENV=development
-    restart: unless-stopped
 
 networks:
   transcendence-network:
