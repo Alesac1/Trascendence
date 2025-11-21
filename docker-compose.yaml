@@ -12,6 +12,8 @@ services:
       - "8080:80"
     depends_on:
       - frontend
+      - backend-auth
+      - backend-blockchain
     networks:
       - transcendence-network
     restart: unless-stopped
@@ -39,8 +41,6 @@ services:
     container_name: transcendence-backend-auth
     volumes:
       - database-auth:/app/database
-    ports:
-      - "3005:3005"
     networks:
       - transcendence-network
     environment:
@@ -53,8 +53,6 @@ services:
       context: ./Backend/Blockchain
       dockerfile: Dockerfile
     container_name: transcendence-backend-blockchain
-    ports:
-      - "8545:3000"
     networks:
       - transcendence-network
     environment:
