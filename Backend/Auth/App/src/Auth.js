@@ -10,15 +10,16 @@ import path from 'node:path';
 const { hash, compare } = bcrypt;
 
 const HOST = process.env.AUTH_HOST ?? '0.0.0.0';
-const PORT = parseInt(process.env.AUTH_PORT ?? process.env.PORT ?? '3001', 10);
-const DB_PATH = process.env.AUTH_DB_PATH ?? path.join(process.cwd(), 'data', 'auth.db');
+const PORT = parseInt(process.env.AUTH_PORT ?? process.env.PORT ?? '3005', 10);
+const DB_DIR = process.env.AUTH_DB_DIR ?? path.join(process.cwd(), 'database');
+const DB_PATH = process.env.AUTH_DB_PATH ?? path.join(DB_DIR, 'auth.db');
 const JWT_SECRET = process.env.JWT_SECRET ?? 'change-this-secret';
 
 if (JWT_SECRET === 'change-this-secret') {
 	console.warn('[auth] No JWT_SECRET provided. Falling back to an insecure default – do not use in production.');
 }
 
-fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+fs.mkdirSync(DB_DIR, { recursive: true });
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');

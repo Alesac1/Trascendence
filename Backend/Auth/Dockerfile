@@ -12,8 +12,8 @@ RUN npm install --omit=dev
 COPY App/ .
 
 # Ensure the SQLite data directory exists (can be overridden by a volume)
-RUN mkdir -p data
+RUN mkdir -p database
 
-EXPOSE 3001
+EXPOSE 3005
 
 CMD ["npm", "start"]

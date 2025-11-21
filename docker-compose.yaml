@@ -31,6 +31,21 @@ services:
       - NODE_ENV=development
     restart: unless-stopped
 
+  # Backend Auth Service
+  backend-auth:
+    build:
+      context: ./Backend/Auth
+      dockerfile: Dockerfile
+    container_name: transcendence-backend-auth
+    volumes:
+      - database-auth:/app/database
+    ports:
+      - "3005:3005"
+    networks:
+      - transcendence-network
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
 
   # Backend Blockchain Service
   backend-blockchain:
@@ -53,5 +68,4 @@ networks:
 
 volumes:
   node_modules_frontend:
-  node_modules_core:
-  node_modules_servizio:
+  database-auth:
