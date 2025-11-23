@@ -2,7 +2,7 @@
 
 set -eu pipefail
 
-ENV_FILE="./srcs/.env"
+ENV_FILE="./src/.env"
 DEPLOY_DIR="./DeployContract"
 DEPLOY_CMD="npx hardhat ignition deploy --network avalancheFuji ignition/modules/store_scores.ts"
 ADDRESSES_FILE="$DEPLOY_DIR/ignition/deployments/chain-43113/deployed_addresses.json"
@@ -63,5 +63,5 @@ fi
 
 echo "Starting blockchain backend..."
 
-cd ./srcs
+cd ./src
 exec node ./BlockChain.js

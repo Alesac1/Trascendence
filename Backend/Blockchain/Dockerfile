@@ -14,7 +14,7 @@ RUN chmod +x /App/entrypoint.sh
 WORKDIR /App/DeployContract
 RUN npm install
 
-WORKDIR /App/srcs
+WORKDIR /App/src
 RUN npm install
 
 EXPOSE 3000
