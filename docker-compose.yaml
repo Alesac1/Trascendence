@@ -45,6 +45,8 @@ services:
       - transcendence-network
     environment:
       - NODE_ENV=development
+      - JWT_PRIVATE_KEY=${jwt_pub_key}
+      - JWT_PUBLIC_KEY=${jwt_pub}
     restart: unless-stopped
 
   # Backend Blockchain Service

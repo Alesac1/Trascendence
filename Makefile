@@ -6,7 +6,7 @@
 #    By: dde-giov <dde-giov@student.42roma.it>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/10/16 13:47:18 by dde-giov          #+#    #+#              #
-#    Updated: 2025/10/23 17:28:28 by dde-giov         ###   ########.fr        #
+#    Updated: 2025/11/23 19:24:16 by dde-giov         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -105,6 +105,76 @@ help:
 	@echo "$(YELLOW)down$(CLR_RMV)               - Stop containers and bring down the services"
 	@echo "$(YELLOW)re$(CLR_RMV)                 - Clean and rebuild the project"
 	@echo "$(YELLOW)restart$(CLR_RMV)            - Restart the services (down and up)"
+	@echo "$(YELLOW)env$(CLR_RMV)                - Ensure .env exists and contains JWT keys"
 	@echo "$(YELLOW)fix-permissions$(CLR_RMV)    - Configure Docker to run without sudo"
 
-.PHONY: all up build clean prune down re restart fix-permissions
+env:
+	@echo "$(CYAN)Ensuring project .env exists$(CLR_RMV)"
+	@if [ ! -f .env ]; then \
+		cp .env.example .env 2>/dev/null || touch .env; \
+		echo "$(GREEN)Created new .env file$(CLR_RMV)"; \
+	fi
+	@echo "$(CYAN)Syncing microservice env files$(CLR_RMV)"
+	@find Backend -mindepth 2 -maxdepth 2 -path '*/App' -type d 2>/dev/null | while read -r appdir; do \
+		for subdir in "$$appdir" "$$appdir/src"; do \
+			[ -d "$$subdir" ] || continue; \
+			if [ -f "$$subdir/.env.example" ]; then \
+				if [ ! -f "$$subdir/.env" ]; then \
+					cp "$$subdir/.env.example" "$$subdir/.env"; \
+					echo "$(GREEN)Created $$subdir/.env from template$(CLR_RMV)"; \
+				else \
+					echo "$(YELLOW)$$subdir/.env already exists$(CLR_RMV)"; \
+				fi; \
+			fi; \
+		done; \
+		if [ ! -f "$$appdir/.env.example" ] && [ ! -f "$$appdir/src/.env.example" ]; then \
+			echo "$(YELLOW)No .env.example in $$appdir or $$appdir/src$(CLR_RMV)"; \
+		fi; \
+	done
+	@BLOCKCHAIN_ENV="Backend/Blockchain/App/src/.env"; \
+	if [ -f "$$BLOCKCHAIN_ENV" ]; then \
+		CURRENT_KEY_RAW=$$(awk -F= '/^PRIVATE_KEY=/{print $$2}' "$$BLOCKCHAIN_ENV"); \
+		CURRENT_KEY_STRIPPED=$$(printf "%s" "$$CURRENT_KEY_RAW" | tr -d '[:space:]'); \
+		if [ -z "$$CURRENT_KEY_STRIPPED" ] || printf "%s" "$$CURRENT_KEY_STRIPPED" | grep -q '^//'; then \
+			printf "$(YELLOW)Enter PRIVATE_KEY for Backend/Blockchain (input hidden): $(CLR_RMV)"; \
+			if [ -t 0 ]; then stty -echo; fi; \
+			read -r NEW_KEY; \
+			if [ -t 0 ]; then stty echo; fi; \
+			printf "\n"; \
+			if grep -q '^PRIVATE_KEY=' "$$BLOCKCHAIN_ENV"; then \
+				sed -i "s|^PRIVATE_KEY=.*|PRIVATE_KEY=$$NEW_KEY|" "$$BLOCKCHAIN_ENV"; \
+			else \
+				echo "PRIVATE_KEY=$$NEW_KEY" >> "$$BLOCKCHAIN_ENV"; \
+			fi; \
+			echo "$(GREEN)PRIVATE_KEY stored in $$BLOCKCHAIN_ENV$(CLR_RMV)"; \
+		else \
+			echo "$(GREEN)PRIVATE_KEY already set for Backend/Blockchain$(CLR_RMV)"; \
+		fi; \
+	else \
+		echo "$(YELLOW)Missing $$BLOCKCHAIN_ENV file$(CLR_RMV)"; \
+	fi
+	@JWT_PRIV=$$(awk -F= '/^jwt_pub_key=/{print $$2}' .env); \
+	JWT_PUB=$$(awk -F= '/^jwt_pub=/{print $$2}' .env); \
+	if [ -n "$$JWT_PRIV" ] && [ -n "$$JWT_PUB" ]; then \
+		echo "$(GREEN)JWT keys already present in .env$(CLR_RMV)"; \
+		exit 0; \
+	fi; \
+	TMPDIR=$$(mktemp -d); \
+	trap 'rm -rf "$$TMPDIR"' EXIT; \
+	echo "$(CYAN)Generating JWT key pair$(CLR_RMV)"; \
+	ssh-keygen -t rsa -b 4096 -m PEM -N '' -f "$$TMPDIR/jwt" >/dev/null; \
+	PRIV_KEY=$$(base64 < "$$TMPDIR/jwt" | tr -d '\n'); \
+	PUB_KEY=$$(base64 < "$$TMPDIR/jwt.pub" | tr -d '\n'); \
+	if grep -q '^jwt_pub_key=' .env; then \
+		sed -i "s|^jwt_pub_key=.*|jwt_pub_key=$$PRIV_KEY|" .env; \
+	else \
+		echo "jwt_pub_key=$$PRIV_KEY" >> .env; \
+	fi; \
+	if grep -q '^jwt_pub=' .env; then \
+		sed -i "s|^jwt_pub=.*|jwt_pub=$$PUB_KEY|" .env; \
+	else \
+		echo "jwt_pub=$$PUB_KEY" >> .env; \
+	fi; \
+	echo "$(GREEN)JWT keys generated and stored in .env (base64)$(CLR_RMV)"
+
+.PHONY: all up build clean prune down re restart fix-permissions env
