@@ -1,10 +1,12 @@
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
+
+dotenv.config({ path: "src/.env"});
 
 const HOST = process.env.PROFILES_HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PROFILES_PORT ?? process.env.PORT ?? '3006', 10);

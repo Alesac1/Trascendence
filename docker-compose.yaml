@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence-nginx
     ports:
-      - "443:443"
+      - "8443:443"
       - "8080:80"
     depends_on:
       - frontend
@@ -44,6 +44,8 @@ services:
       - database-auth:/app/database
     networks:
       - transcendence-network
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=development
       - JWT_PRIVATE_KEY=${jwt_pub_key}
