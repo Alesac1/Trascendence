@@ -6,7 +6,7 @@
 #    By: dde-giov <dde-giov@student.42roma.it>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/10/16 13:47:18 by dde-giov          #+#    #+#              #
-#    Updated: 2025/11/23 19:24:16 by dde-giov         ###   ########.fr        #
+#    Updated: 2025/11/23 21:50:30 by dde-giov         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -155,7 +155,19 @@ env:
 	fi
 	@JWT_PRIV=$$(awk -F= '/^jwt_pub_key=/{print $$2}' .env); \
 	JWT_PUB=$$(awk -F= '/^jwt_pub=/{print $$2}' .env); \
-	if [ -n "$$JWT_PRIV" ] && [ -n "$$JWT_PUB" ]; then \
+	VALID_PRIV=0; \
+	VALID_PUB=0; \
+	if [ -n "$$JWT_PRIV" ]; then \
+		if printf "%s" "$$JWT_PRIV" | base64 --decode 2>/dev/null | grep -q -- '-----BEGIN RSA PRIVATE KEY-----'; then \
+			VALID_PRIV=1; \
+		fi; \
+	fi; \
+	if [ -n "$$JWT_PUB" ]; then \
+		if printf "%s" "$$JWT_PUB" | base64 --decode 2>/dev/null | grep -Eq -- '-----BEGIN (RSA )?PUBLIC KEY-----'; then \
+			VALID_PUB=1; \
+		fi; \
+	fi; \
+	if [ "$$VALID_PRIV" -eq 1 ] && [ "$$VALID_PUB" -eq 1 ]; then \
 		echo "$(GREEN)JWT keys already present in .env$(CLR_RMV)"; \
 		exit 0; \
 	fi; \
@@ -163,8 +175,11 @@ env:
 	trap 'rm -rf "$$TMPDIR"' EXIT; \
 	echo "$(CYAN)Generating JWT key pair$(CLR_RMV)"; \
 	ssh-keygen -t rsa -b 4096 -m PEM -N '' -f "$$TMPDIR/jwt" >/dev/null; \
+	if ! openssl rsa -in "$$TMPDIR/jwt" -pubout -out "$$TMPDIR/jwt_public.pem" >/dev/null 2>&1; then \
+		ssh-keygen -f "$$TMPDIR/jwt.pub" -e -m PKCS8 > "$$TMPDIR/jwt_public.pem"; \
+	fi; \
 	PRIV_KEY=$$(base64 < "$$TMPDIR/jwt" | tr -d '\n'); \
-	PUB_KEY=$$(base64 < "$$TMPDIR/jwt.pub" | tr -d '\n'); \
+	PUB_KEY=$$(base64 < "$$TMPDIR/jwt_public.pem" | tr -d '\n'); \
 	if grep -q '^jwt_pub_key=' .env; then \
 		sed -i "s|^jwt_pub_key=.*|jwt_pub_key=$$PRIV_KEY|" .env; \
 	else \

@@ -14,6 +14,7 @@ services:
       - frontend
       - backend-auth
       - backend-blockchain
+      - backend-profiles
     networks:
       - transcendence-network
     restart: unless-stopped
@@ -49,6 +50,21 @@ services:
       - JWT_PUBLIC_KEY=${jwt_pub}
     restart: unless-stopped
 
+  # Backend Profiles Service
+  backend-profiles:
+    build:
+      context: ./Backend/Profiles
+      dockerfile: Dockerfile
+    container_name: transcendence-backend-profiles
+    volumes:
+      - database-profiles:/app/database
+    networks:
+      - transcendence-network
+    environment:
+      - NODE_ENV=development
+      - JWT_PUBLIC_KEY=${jwt_pub}
+    restart: unless-stopped
+
   # Backend Blockchain Service
   backend-blockchain:
     build:
@@ -69,3 +85,4 @@ networks:
 volumes:
   node_modules_frontend:
   database-auth:
+  database-profiles:

@@ -14,8 +14,27 @@ const PORT = parseInt(process.env.AUTH_PORT ?? process.env.PORT ?? '3005', 10);
 const DB_DIR = process.env.AUTH_DB_DIR ?? path.join(process.cwd(), 'database');
 const DB_PATH = process.env.AUTH_DB_PATH ?? path.join(DB_DIR, 'auth.db');
 const JWT_SECRET = process.env.JWT_SECRET ?? 'change-this-secret';
+const JWT_PRIVATE_KEY = process.env.JWT_PRIVATE_KEY;
+const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY;
 
-if (JWT_SECRET === 'change-this-secret') {
+const decodePem = (value) => {
+	if (!value) return null;
+	const trimmed = value.trim();
+	if (trimmed.includes('-----BEGIN')) {
+		return trimmed;
+	}
+	try {
+		return Buffer.from(trimmed, 'base64').toString('utf8');
+	} catch (_err) {
+		return trimmed;
+	}
+};
+
+const privateKeyPem = decodePem(JWT_PRIVATE_KEY);
+const publicKeyPem = decodePem(JWT_PUBLIC_KEY);
+const isRsaConfigured = Boolean(privateKeyPem);
+
+if (!isRsaConfigured && JWT_SECRET === 'change-this-secret') {
 	console.warn('[auth] No JWT_SECRET provided. Falling back to an insecure default – do not use in production.');
 }
 
@@ -39,12 +58,32 @@ const insertUserStmt = db.prepare('INSERT INTO users (username, password_hash) V
 
 const app = Fastify({ logger: true });
 
-await app.register(fastifyJwt, {
-	secret: JWT_SECRET,
-	sign: {
-		expiresIn: '1h'
+const jwtPluginOptions = isRsaConfigured
+	? {
+		secret: {
+			private: privateKeyPem,
+			public: publicKeyPem ?? privateKeyPem
+		},
+		sign: {
+			algorithm: 'RS256',
+			expiresIn: '1h'
+		},
+		verify: {
+			algorithms: ['RS256']
+		}
 	}
-});
+	: {
+		secret: JWT_SECRET,
+		sign: {
+			expiresIn: '1h'
+		}
+	};
+
+if (isRsaConfigured) {
+	console.info('[auth] Using RSA key pair for JWT signing');
+}
+
+await app.register(fastifyJwt, jwtPluginOptions);
 
 app.decorate('authenticate', async function authenticate(request, reply) {
 	try {
