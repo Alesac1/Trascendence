@@ -42,25 +42,61 @@ db.prepare(`
 	CREATE TABLE IF NOT EXISTS profiles (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INTEGER NOT NULL UNIQUE,
-		display_name TEXT,
 		avatar_url TEXT,
 		bio TEXT,
+		status TEXT DEFAULT 'Offline',
+		last_seen DATETIME,
+		wins INTEGER DEFAULT 0,
+		losses INTEGER DEFAULT 0,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	)
 `).run();
 
+try { db.prepare(`ALTER TABLE profiles ADD COLUMN losses INTEGER DEFAULT 0`).run(); } catch {}
+
+db.prepare(`
+	CREATE TABLE IF NOT EXISTS friendships (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		friend_id INTEGER NOT NULL,
+		status TEXT NOT NULL CHECK(status IN ('pending', 'accepted', 'blocked')),
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		action_user_id INTEGER NOT NULL,
+		UNIQUE(user_id, friend_id),
+		FOREIGN KEY(user_id) REFERENCES profiles(user_id) ON DELETE CASCADE,
+		FOREIGN KEY(friend_id) REFERENCES profiles(user_id) ON DELETE CASCADE,
+		FOREIGN KEY(action_user_id) REFERENCES profiles(user_id) ON DELETE CASCADE,
+		CHECK(user_id < friend_id)
+	)
+`).run();
+
 const upsertProfileStmt = db.prepare(`
-	INSERT INTO profiles (user_id, display_name, avatar_url, bio, updated_at)
-	VALUES (@user_id, @display_name, @avatar_url, @bio, CURRENT_TIMESTAMP)
+	INSERT INTO profiles (user_id, avatar_url, bio, status, last_seen, wins, losses, updated_at)
+	VALUES (@user_id, @avatar_url, @bio, @status, @last_seen, @wins, @losses, CURRENT_TIMESTAMP)
 	ON CONFLICT(user_id) DO UPDATE SET
-		display_name=excluded.display_name,
-		avatar_url=excluded.avatar_url,
-		bio=excluded.bio,
+		avatar_url=COALESCE(excluded.avatar_url, avatar_url),
+		bio=COALESCE(excluded.bio, bio),
+		status=excluded.status,
+		last_seen=excluded.last_seen,
 		updated_at=CURRENT_TIMESTAMP
 `);
 const getProfileStmt = db.prepare('SELECT * FROM profiles WHERE user_id = ?');
 const listProfilesStmt = db.prepare('SELECT * FROM profiles ORDER BY updated_at DESC LIMIT ? OFFSET ?');
+
+const insertFriendRequestStmt = db.prepare(`
+	INSERT OR IGNORE INTO friendships (user_id, friend_id, status, action_user_id)
+	VALUES (?, ?, 'pending', ?)
+`);
+const updateFriendStatusStmt = db.prepare(`
+	UPDATE friendships SET status = ? WHERE user_id = ? AND friend_id = ?
+`);
+const getFriendshipsStmt = db.prepare(`
+	SELECT f.*
+	FROM friendships f
+	WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = ?
+	ORDER BY f.created_at DESC
+`);
 
 const app = Fastify({ logger: true });
 
@@ -90,9 +126,12 @@ if (publicKeyPem) {
 
 const sanitizeProfile = (row) => ({
 	userId: row.user_id,
-	displayName: row.display_name,
 	avatarUrl: row.avatar_url,
 	bio: row.bio,
+	status: row.status,
+	lastSeen: row.last_seen,
+	wins: row.wins,
+	losses: row.losses,
 	createdAt: row.created_at,
 	updatedAt: row.updated_at
 });
@@ -112,20 +151,27 @@ const ensureUserFromToken = (user) => {
 	return userId;
 };
 
-app.post('/profiles/me', { preValidation: [app.authenticate] }, async (request) => {
+app.post('/me', { preValidation: [app.authenticate] }, async (request) => {
 	const userId = ensureUserFromToken(request.user);
 
 	const payload = typeof request.body === 'object' && request.body !== null ? request.body : {};
-	const display_name = typeof payload.displayName === 'string' ? payload.displayName : null;
 	const avatar_url = typeof payload.avatarUrl === 'string' ? payload.avatarUrl : null;
 	const bio = typeof payload.bio === 'string' ? payload.bio : null;
 
-	upsertProfileStmt.run({ user_id: userId, display_name, avatar_url, bio });
+	upsertProfileStmt.run({ 
+		user_id: userId, 
+		avatar_url, 
+		bio, 
+		status: 'Online', 
+		last_seen: new Date().toISOString(), 
+		wins: 0, 
+		losses: 0 
+	});
 	const profile = getProfileStmt.get(userId);
 	return { profile: sanitizeProfile(profile) };
 });
 
-app.get('/profiles/me', { preValidation: [app.authenticate] }, async (request, reply) => {
+app.get('/me', { preValidation: [app.authenticate] }, async (request, reply) => {
 	const userId = ensureUserFromToken(request.user);
 
 	const profile = getProfileStmt.get(userId);
@@ -136,7 +182,7 @@ app.get('/profiles/me', { preValidation: [app.authenticate] }, async (request, r
 	return { profile: sanitizeProfile(profile) };
 });
 
-app.get('/profiles', { preValidation: [app.authenticate] }, async (request) => {
+app.get('/', { preValidation: [app.authenticate] }, async (request) => {
 	const query = request.query ?? {};
 	const limitParam = Number(query.limit ?? 20);
 	const offsetParam = Number(query.offset ?? 0);
@@ -149,7 +195,7 @@ app.get('/profiles', { preValidation: [app.authenticate] }, async (request) => {
 	};
 });
 
-app.get('/profiles/:userId', { preValidation: [app.authenticate] }, async (request, reply) => {
+app.get('/:userId', { preValidation: [app.authenticate] }, async (request, reply) => {
 	const userId = parseUserId(request.params?.userId);
 	if (userId === null) {
 		reply.code(400);
@@ -161,6 +207,55 @@ app.get('/profiles/:userId', { preValidation: [app.authenticate] }, async (reque
 		return { message: 'Profile not found' };
 	}
 	return { profile: sanitizeProfile(profile) };
+});
+
+// Friendships routes
+app.post('/friends/request/:friendId', { preValidation: [app.authenticate] }, async (request, reply) => {
+	const userId = ensureUserFromToken(request.user);
+	const friendId = parseUserId(request.params.friendId);
+	if (friendId === null || friendId === userId) {
+		reply.code(400);
+		return { message: 'Invalid friend id' };
+	}
+	const [smaller, larger] = userId < friendId ? [userId, friendId] : [friendId, userId];
+	insertFriendRequestStmt.run(smaller, larger, userId);
+	return { message: 'Friend request sent' };
+});
+
+app.post('/friends/:friendId/accept', { preValidation: [app.authenticate] }, async (request, reply) => {
+	const userId = ensureUserFromToken(request.user);
+	const friendId = parseUserId(request.params.friendId);
+	if (friendId === null) {
+		reply.code(400);
+		return { message: 'Invalid friend id' };
+	}
+	const [smaller, larger] = userId < friendId ? [userId, friendId] : [friendId, userId];
+	updateFriendStatusStmt.run('accepted', smaller, larger);
+	return { message: 'Friend request accepted' };
+});
+
+app.post('/friends/:friendId/block', { preValidation: [app.authenticate] }, async (request, reply) => {
+	const userId = ensureUserFromToken(request.user);
+	const friendId = parseUserId(request.params.friendId);
+	if (friendId === null) {
+		reply.code(400);
+		return { message: 'Invalid friend id' };
+	}
+	const [smaller, larger] = userId < friendId ? [userId, friendId] : [friendId, userId];
+	updateFriendStatusStmt.run('blocked', smaller, larger);
+	return { message: 'Friend blocked' };
+});
+
+app.get('/friends', { preValidation: [app.authenticate] }, async (request) => {
+	const userId = ensureUserFromToken(request.user);
+	const friendships = getFriendshipsStmt.all(userId, userId, 'accepted');
+	return { friendships };
+});
+
+app.get('/friends/requests', { preValidation: [app.authenticate] }, async (request) => {
+	const userId = ensureUserFromToken(request.user);
+	const friendships = getFriendshipsStmt.all(userId, userId, 'pending');
+	return { friendships };
 });
 
 const start = async () => {
