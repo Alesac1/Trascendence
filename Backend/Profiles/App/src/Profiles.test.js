@@ -34,10 +34,9 @@ test('profiles: create, fetch, list, and guard auth', async (t) => {
 
   const createResponse = await app.inject({
     method: 'POST',
-    url: '/profiles/me',
+    url: '/me',
     headers: await authHeader(1),
     payload: {
-      displayName: 'Alice',
       avatarUrl: 'https://example.com/alice.png',
       bio: 'Ready to play'
     }
@@ -45,12 +44,16 @@ test('profiles: create, fetch, list, and guard auth', async (t) => {
 
   assert.equal(createResponse.statusCode, 200);
   const created = createResponse.json().profile;
-  assert.equal(created.displayName, 'Alice');
   assert.equal(created.userId, 1);
+  assert.equal(created.status, 'Online');
+  assert.ok(created.lastSeen);
+  assert.equal(created.wins, 0);
+  assert.equal(created.losses, 0);
+  assert.ok(created.createdAt);
 
   const meResponse = await app.inject({
     method: 'GET',
-    url: '/profiles/me',
+    url: '/me',
     headers: await authHeader(1)
   });
 
@@ -59,16 +62,16 @@ test('profiles: create, fetch, list, and guard auth', async (t) => {
 
   const otherResponse = await app.inject({
     method: 'GET',
-    url: '/profiles/1',
+    url: '/1',
     headers: await authHeader(2)
   });
 
   assert.equal(otherResponse.statusCode, 200);
-  assert.equal(otherResponse.json().profile.displayName, 'Alice');
+  assert.equal(otherResponse.json().profile.bio, 'Ready to play');
 
   const listResponse = await app.inject({
     method: 'GET',
-    url: '/profiles?limit=10&offset=0',
+    url: '/?limit=10&offset=0',
     headers: await authHeader(2)
   });
 
@@ -78,7 +81,7 @@ test('profiles: create, fetch, list, and guard auth', async (t) => {
 
   const unauthorizedResponse = await app.inject({
     method: 'GET',
-    url: '/profiles/me'
+    url: '/me'
   });
 
   assert.equal(unauthorizedResponse.statusCode, 401);
