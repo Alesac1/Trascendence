@@ -1,11 +1,16 @@
 import type { Router } from '../core/router';
 import './style.css';
+import wallpaper from './wallpaper.gif';
 
 export function renderLogin(app: HTMLDivElement, router: Router) {
-app.innerHTML = `
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
-        <div class="w-full max-w-md px-4">
-        <div class="rounded-3xl border border-slate-700/70 bg-slate-900/70 backdrop-blur-xl p-8 shadow-[0_0_40px_rgba(56,189,248,0.5)]">
+    app.innerHTML = `
+        <div class="relative min-h-screen overflow-hidden text-white">
+            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" style="background-image: url('${wallpaper}');"></div>
+            <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+
+            <div class="relative z-10 min-h-screen flex items-center justify-center px-4">
+                <div class="w-full max-w-md">
+                    <div class="rounded-3xl border border-slate-700/70 bg-slate-900/80 backdrop-blur-xl p-8 shadow-[0_0_40px_rgba(56,189,248,0.5)]">
             <h1 class="text-3xl font-semibold mb-2 bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-violet-400 bg-clip-text text-transparent">
             Transcendence Login
             </h1>
@@ -54,9 +59,10 @@ app.innerHTML = `
                 Non hai un account? <a href="#" class="text-cyan-400 hover:underline" id="register-link">Registrati</a>
             </p>    
             </form>
+                    </div>
+                </div>
+            </div>
         </div>
-        </div>
-    </div>
     `;
     
   const registerLink = app.querySelector<HTMLAnchorElement>('#register-link');
