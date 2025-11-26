@@ -2,15 +2,22 @@
 import dotenv from 'dotenv';
 import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
+import fastifyMultipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pipeline } from 'node:stream/promises';
 
 dotenv.config({ path: "src/.env"});
 
 const HOST = process.env.PROFILES_HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PROFILES_PORT ?? process.env.PORT ?? '3006', 10);
-const DB_PATH = process.env.PROFILES_DB_PATH ?? path.join(process.cwd(), 'data', 'profiles.db');
+const DB_DIR = process.env.DB_DIR ?? path.join(process.cwd(), 'database');
+
+const DB_PATH = path.join(DB_DIR, 'profiles.db');
+const AVATAR_DIR = path.join(DB_DIR, 'avatars');
+
 const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY;
 const JWT_AUDIENCE = process.env.AUTH_JWT_AUDIENCE;
 
@@ -34,6 +41,7 @@ if (!publicKeyPem) {
 }
 
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+fs.mkdirSync(AVATAR_DIR, { recursive: true });
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
@@ -91,14 +99,19 @@ const insertFriendRequestStmt = db.prepare(`
 const updateFriendStatusStmt = db.prepare(`
 	UPDATE friendships SET status = ? WHERE user_id = ? AND friend_id = ?
 `);
+const updateAvatarStmt = db.prepare('UPDATE profiles SET avatar_url = ? WHERE user_id = ?');
+
 const getFriendshipsStmt = db.prepare(`
-	SELECT f.*
-	FROM friendships f
-	WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = ?
-	ORDER BY f.created_at DESC
+	SELECT * FROM friendships WHERE (user_id = ? OR friend_id = ?) AND status = ?
 `);
 
 const app = Fastify({ logger: true });
+
+await app.register(fastifyMultipart);
+await app.register(fastifyStatic, {
+	root: AVATAR_DIR,
+	prefix: '/avatars/'
+});
 
 if (publicKeyPem) {
 	const verifyOptions = {
@@ -150,6 +163,32 @@ const ensureUserFromToken = (user) => {
 	}
 	return userId;
 };
+
+app.post('/me/avatar', { preValidation: [app.authenticate] }, async (request, reply) => {
+	const userId = ensureUserFromToken(request.user);
+
+	const data = await request.file();
+	if (!data) {
+		reply.code(400);
+		return { message: 'No file uploaded' };
+	}
+
+	const ext = path.extname(data.filename).toLowerCase();
+	if (!['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+		reply.code(400);
+		return { message: 'Invalid file type' };
+	}
+
+	const filename = `${userId}${ext}`;
+	const filepath = path.join(AVATAR_DIR, filename);
+
+	await pipeline(data.file, fs.createWriteStream(filepath));
+
+	const avatar_url = `/avatars/${filename}`;
+	updateAvatarStmt.run(avatar_url, userId);
+
+	return { avatarUrl: avatar_url };
+});
 
 app.post('/me', { preValidation: [app.authenticate] }, async (request) => {
 	const userId = ensureUserFromToken(request.user);

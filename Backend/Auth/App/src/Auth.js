@@ -14,9 +14,6 @@ const { hash, compare } = bcrypt;
 const HOST = process.env.AUTH_HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.AUTH_PORT ?? process.env.PORT ?? '3005', 10);
 const DB_DIR = process.env.DB_DIR ?? path.join(process.cwd(), 'database');
-if (! process.env.DB_DIR){
-	console.log("NO DB_DIR in env, using default");
-}
 
 const DB_PATH = path.join(DB_DIR, 'auth.db');
 const EMAIL_DB_PATH = path.join(DB_DIR, 'auth-email.db');
